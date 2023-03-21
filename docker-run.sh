@@ -1,0 +1,1 @@
+sudo docker run -d --restart unless-stopped telebot
