@@ -11,6 +11,9 @@ const mysqlUsername = process.env.MYSQL_USERNAME;
 const mysqlPasswd = process.env.MYSQL_PASSWD;
 const orgId = process.env.OPENAI_ORG_ID;
 
+const model3 = 'gpt-3.5-turbo-0301';
+const model4 = 'gpt-4';
+
 const bot = new Telegraf(token);
 
 const configuration = new Configuration({
@@ -33,6 +36,10 @@ const outputAssistantPersonality = (ctx, pers) => {
   ctx.reply('Your assistant is: '+pers);
 }
 
+const outputGptModel = (ctx, mode) => {
+  ctx.reply('Your GPT model is: '+mode);
+}
+
 const backOff = (ctx) => {
   ctx.reply('Back off, I do not know you, '+ctx.from.username);
 }
@@ -44,7 +51,7 @@ bot.context.db = {
     return data[0][0];
   },
   getAllData: async (username) => {
-    let data = await con.query(`select role, personality, mode, last_message from users u inner join states s where u.id = s.user_id and u.username = ?`, username);
+    let data = await con.query(`select role, personality, mode, last_message, gpt_model from users u inner join states s where u.id = s.user_id and u.username = ?`, username);
     console.log(data[0][0]);
     return data[0][0];
   },
@@ -53,6 +60,9 @@ bot.context.db = {
   },
   setMode: async (username, mode) => {
     await con.query(`update states set mode = ? where user_id = (select id from users where username = ?)`, [mode, username]);
+  },
+  setGptModel: async (username, model) => {
+    await con.query(`update states set gpt_model = ? where user_id = (select id from users where username = ?)`, [model, username]);
   },
   createSession: async (username) => {
     await con.query(`update states set session_id = ((select maxval FROM (SELECT MAX(session_id) AS maxval FROM states) AS sub_selected_value) + 1) where user_id = (select id from users where username = ?)`, [username]);
@@ -83,6 +93,18 @@ bot.context.db = {
   },
 }
 
+async function updateModel(ctx, model) {
+  const user = ctx.from.username;
+  const data = await ctx.db.getRole(user);
+  if (!data) {
+    backOff(ctx);
+    return;
+  }
+  await ctx.db.setGptModel(user, model);
+  const updated = await ctx.db.getAllData(user);
+  ctx.reply('Your model is: '+updated.gpt_model);
+  await updateTimestamp(user);
+}
 bot.command('whoami', async (ctx) => {
   const user = ctx.from.username;
   const data = await ctx.db.getAllData(user);
@@ -98,6 +120,7 @@ bot.command('whoami', async (ctx) => {
   }
   outputAssistantPersonality(ctx, data.personality);
   outputChatMode(ctx, data.mode);
+  outputGptModel(ctx, data.gpt_model);
   await updateTimestamp(user);
 });
 
@@ -160,6 +183,14 @@ bot.command('resetassistant', async (ctx) => {
   await updateTimestamp(user);
 });
 
+bot.command('gpt3', async (ctx) => {
+  await updateModel(ctx, model3);
+});
+
+bot.command('gpt4', async (ctx) => {
+  await updateModel(ctx, model4);
+});
+
 
 bot.on('text', async (ctx) => {
   // Get the text message from the context object
@@ -194,7 +225,7 @@ bot.on('text', async (ctx) => {
 
   try {
     const response = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo-0301',
+      model: data.gpt_model,
       messages: messages,
       temperature: 0.8,
     });
