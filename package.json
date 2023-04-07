@@ -17,5 +17,11 @@
     "sqlite3": "^5.1.6",
     "telegraf": "^4.12.2"
   },
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "@types/dotenv": "^8.2.0",
+    "@types/node": "^18.15.11",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.3"
+  }
 }
