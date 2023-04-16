@@ -18,3 +18,7 @@
 **/setassistant** - sets your assistant personality. I.e. `/setassistant an assistant who is speaking like Master Yoda`
 
 **/resetassistant** - clears your assistant personality and sets it to `a friendly personal assistant`
+
+**/gpt3** - switches to gpt3 model
+
+**/gpt4** - switches to gpt4 model (you need to have an API access to that!)
