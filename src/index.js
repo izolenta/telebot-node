@@ -16,6 +16,17 @@ const model4 = 'gpt-4';
 
 const bot = new Telegraf(token);
 
+bot.use(async (ctx, next) => {
+  const user = ctx.from.username;
+  let data = await ctx.db.getAllData(user);
+  if (!data) {
+    backOff(ctx);
+    return;
+  }
+  await next();
+})
+
+
 const configuration = new Configuration({
   apiKey: openaiApiKey,
   organization: orgId
@@ -95,11 +106,6 @@ bot.context.db = {
 
 async function updateModel(ctx, model) {
   const user = ctx.from.username;
-  const data = await ctx.db.getRole(user);
-  if (!data) {
-    backOff(ctx);
-    return;
-  }
   await ctx.db.setGptModel(user, model);
   const updated = await ctx.db.getAllData(user);
   ctx.reply('Your model is: '+updated.gpt_model);
@@ -108,10 +114,6 @@ async function updateModel(ctx, model) {
 bot.command('whoami', async (ctx) => {
   const user = ctx.from.username;
   const data = await ctx.db.getAllData(user);
-  if (!data) {
-    backOff(ctx);
-    return;
-  }
   if (data.role === 1) {
     ctx.reply('You are Master '+ctx.from.username+', you can do everything!');
   }
@@ -127,10 +129,6 @@ bot.command('whoami', async (ctx) => {
 bot.command('context', async (ctx) => {
   const user = ctx.from.username;
   const data = await ctx.db.getAllData(user);
-  if (!data) {
-    backOff(ctx);
-    return;
-  }
   if (data.mode === 1) {
     ctx.reply('Already in context mode, starting new chat');
   }
@@ -143,11 +141,6 @@ bot.command('context', async (ctx) => {
 
 bot.command('simple', async (ctx) => {
   const user = ctx.from.username;
-  const data = await ctx.db.getRole(user);
-  if (!data) {
-    backOff(ctx);
-    return;
-  }
   await ctx.db.setMode(user, 0);
   const updated = await ctx.db.getAllData(user);
   outputChatMode(ctx, updated.mode)
@@ -157,11 +150,6 @@ bot.command('simple', async (ctx) => {
 
 bot.command('setassistant', async (ctx) => {
   const user = ctx.from.username;
-  const data = await ctx.db.getRole(user);
-  if (!data) {
-    backOff(ctx);
-    return;
-  }
   const assistant = ctx.message.text.substring(14);
   console.log(assistant);
   await ctx.db.setAssistant(user, assistant);
@@ -172,11 +160,6 @@ bot.command('setassistant', async (ctx) => {
 
 bot.command('resetassistant', async (ctx) => {
   const user = ctx.from.username;
-  const data = await ctx.db.getRole(user);
-  if (!data) {
-    backOff(ctx);
-    return;
-  }
   await ctx.db.setAssistant(user, 'a friendly personal assistant');
   const updated = await ctx.db.getAllData(user);
   ctx.reply('Your assistant is: '+updated.personality);
@@ -190,16 +173,10 @@ bot.command('gpt3', async (ctx) => {
 bot.command('gpt4', async (ctx) => {
   await updateModel(ctx, model4);
 });
-
-
 bot.on('text', async (ctx) => {
   // Get the text message from the context object
   const user = ctx.from.username;
   let data = await ctx.db.getAllData(user);
-  if (!data) {
-    backOff(ctx);
-    return;
-  }
   const message = ctx.message.text;
   if (data.mode === 1) {
     if ((Date.now() - data.last_message) > 7200000) {
@@ -243,15 +220,28 @@ bot.on('text', async (ctx) => {
 });
 
 const main = async () => {
-  con = await mysql.createConnection({
+  con = mysql.createPool({
     host: mysqlAddr,
     user: mysqlUsername,
+    database: mysqlDbName,
     password: mysqlPasswd,
-    database: mysqlDbName
+    waitForConnections: true,
+    connectionLimit: 10,
+    maxIdle: 10, // max idle connections, the default value is the same as `connectionLimit`
+    idleTimeout: 60000, // idle connections timeout, in milliseconds, the default value 60000
+    queueLimit: 0
   });
-
+  // con = await mysql.createConnection({
+  //   host: mysqlAddr,
+  //   user: mysqlUsername,
+  //   password: mysqlPasswd,
+  //   database: mysqlDbName
+  // });
 // Start the bot
   bot.launch();
 }
 
 main();
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));

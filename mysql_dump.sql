@@ -1,10 +1,8 @@
-CREATE DATABASE  IF NOT EXISTS `telebot` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `telebot`;
 -- MySQL dump 10.13  Distrib 8.0.26, for macos11 (x86_64)
 --
 -- Host: 192.168.1.73    Database: telebot
 -- ------------------------------------------------------
--- Server version	8.0.20
+-- Server version	8.0.32
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -49,7 +47,8 @@ CREATE TABLE `states` (
   `mode` int NOT NULL,
   `last_message` datetime DEFAULT NULL,
   `session_id` int NOT NULL,
-  PRIMARY KEY (`id`),
+  `gpt_model` varchar(45) NOT NULL DEFAULT 'gpt-3.5-turbo-0301',
+  PRIMARY KEY (`id`,`gpt_model`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `users_key_idx` (`user_id`),
   KEY `session_id_idx` (`session_id`),
@@ -82,4 +81,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-03-21 17:46:07
+-- Dump completed on 2023-04-07 16:39:38
